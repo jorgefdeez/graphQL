@@ -1,9 +1,30 @@
-import {ApolloServer} from "apollo-server"
-import {typeDefs} from "./schema"
-import { resolvers } from "./resolvers"
+import { ApolloServer } from "apollo-server";
+import { typeDefs } from "./graphql/schema";
+import { resolvers } from "./graphql/resolvers";
+import { connectToMongoDb } from "./db/mongo";
+import { getUserFromToken} from "./auth";
 
-const server = new ApolloServer({typeDefs, resolvers})
+const start = async () => {
+  try {
+    await connectToMongoDb();
 
-server.listen({ port: 3000 }).then(()=>{
-    console.log("gql rulando en el puerto 4000");
-})
+    const server = new ApolloServer({
+      typeDefs,
+      resolvers,
+      context: async ({ req }) => {
+        const token = req.headers.authorization || "";
+        const user = token ? await getUserFromToken(token as string) : null;
+        return { user };
+      },
+    });
+
+    await server.listen({ port: 3000 }).then(()=>{
+      console.log("gql operativo")
+
+    });
+  } catch (error) {
+    console.error("Error iniciando servidor:", error);
+  }
+};
+
+start();
